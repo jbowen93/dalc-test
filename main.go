@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 
 	"github.com/celestiaorg/dalc/proto/dalc"
 	"github.com/celestiaorg/dalc/proto/optimint"
@@ -16,14 +18,22 @@ var (
 )
 
 func main() {
-	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
+
+	destIP := os.Getenv("DEST_IP")
+	destPort := os.Getenv("DEST_PORT")
+
+	conn, err := grpc.Dial(destIP+":"+destPort, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 
 	// set the global client
 	dalcClient = dalc.NewDALCServiceClient(conn)
-	dalcClient.CheckBlockAvailability(context.TODO(), &dalc.CheckBlockAvailabilityRequest{})
+	height, err := strconv.Atoi(os.Getenv("BLOCK_HEIGHT"))
+	if err != nil {
+		panic(err)
+	}
+	submitBlock(uint64(height))
 }
 
 func getBlockAvailability(height uint64) {
@@ -37,19 +47,18 @@ func getBlockAvailability(height uint64) {
 	fmt.Printf("%v\n", hash)
 }
 
-func submitBlock() *optimint.Block {
+func submitBlock(height uint64) *optimint.Block {
 	id := []byte{1, 2, 3, 4, 5, 6, 7, 8}
-	hate := uint64(8)
 	block := &optimint.Block{
 		Header: &optimint.Header{
-			Height:      hate,
+			Height:      height,
 			NamespaceId: id,
 		},
 		Data: &optimint.Data{
 			Txs: [][]byte{bytes.Repeat([]byte{1, 2, 3, 4}, 2000), {2}, {3, 4}},
 		},
 		LastCommit: &optimint.Commit{
-			Height: hate,
+			Height: height,
 		},
 	}
 	req := dalc.SubmitBlockRequest{
